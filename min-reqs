@@ -1,0 +1,164 @@
+#!/usr/bin/env bash
+
+
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case "$key" in
+			-d|--dest_dir)
+			shift
+			dest_dir=$1
+			shift
+			;;
+            -f|--file)
+            shift
+            requirements_file=$1
+            shift
+            ;;
+            -n|--novernum)
+            without_version_nums="t"
+            shift
+            ;;
+			-p|--pip_path)
+			shift
+			pip_exe=$1
+			shift
+			;;
+            -v|--verbose)
+			verbose="t"
+			shift
+			;;
+			*)
+            shift
+            ;;
+    esac
+done
+
+# check whether requirements file argument is provided - if it is,
+# check whter argument does not exist - if it does not, exit.
+[ -n "$requirements_file" ] && [ ! -f "$requirements_file" ] &&
+echo "file $requirements_file does not exist." &&
+exit 1
+
+# if requirements file is not readable -exit. 
+[ -n "$requirements_file" ] && [ ! -r "$requirements_file" ] &&
+echo "file $requirements_file is not readable." &&
+exit 1
+
+# if source is requirements file, check whether -p param is provided
+# if not exit
+[ -n "$requirements_file" ] && [ -z "$pip_exe" ] &&
+echo "Path to pip unknow. Provide '-p' parameter." &&
+exit 1
+
+# is -p parameter existing file
+[ -n "$pip_exe" ] && [ ! -f "$pip_exe" ] && 
+echo "file $pip_exe does not exist" && 
+exit 1
+
+# is -p parameter executable file
+[ -n "$pip_exe" ] && [ ! -x "$pip_exe" ] && 
+echo "file $pip_exe is not executable" && 
+exit 1
+
+# is -d paramaeter provided, if so, is it an existing directory
+[ -n "$dest_dir" ] && [ ! -d "$dest_dir" ] && 
+echo "directory $dest_dir does not exist" &&
+exit 1
+
+# is -d parameter directory writable
+[ -n "$dest_dir" ] && [ ! -w "$dest_dir" ] &&
+echo "directory $dest_dir is not writable"
+
+# if no requirements file is provided, check whether in virtual
+# environment, if not - exit
+[ -z "$requirements_file" ] && [ -z "$VIRTUAL_ENV" ] &&
+echo "No requirements file provided and not in virtual env." &&
+echo "Variable 'VIRTUAL_ENV' is empty." &&
+exit 1
+
+start=$(date +%s)
+
+# if requirements file is provided, path to pip executable provided
+# in -p parameter is saved to variable path_to_pip and array of
+# requirements is created from requirements file. Otherwise pip
+# from virtualenvironment is used and array is created via pip freeze
+# in subshell.
+if [ -n "$requirements_file" ]; then
+	path_to_pip="$pip_exe"
+    read -d '' -a freeze_arr < "$requirements_file"
+else
+	path_to_pip="$VIRTUAL_ENV/bin/pip"
+    read -d '' -a freeze_arr <<< $("$VIRTUAL_ENV/bin/pip" freeze)
+fi
+
+len="${#freeze_arr[@]}"
+
+[[ -n "$verbose" ]] && echo "current virtual environment: $VIRTUAL_ENV"
+[[ -n "$verbose" ]] && echo "number of dependencies found: $len"
+[[ -n "$verbose" ]] && printf '=%.0s' {1..80} && echo
+
+# iterate over each element in requirements array,
+# call 'pip show <name>' on each element and collect information 
+# about dependencies. Append all to 'main' array.
+main=()
+for i in "${freeze_arr[@]}"; do
+    name="${i%==*}"
+    reqs=$("$path_to_pip" show "$name" | grep "Requires")
+    IFS=', ' read -r -a array <<< "${reqs#*:}" && unset IFS
+    [[ -n "$verbose" ]] && echo -e "\e[1m${name}\e[0m"
+    [[ -n "$verbose" ]] && echo "Requires: ${array[@]}"
+    main+=( "${array[@]}" )
+    [[ -n "$verbose" ]] && printf '=%.0s' {1..80} && echo
+done
+
+# sort and return only unique elements
+no_duplicates=$( tr ' ' '\n' <<< "${main[@]}" | sort -u )
+
+# if not using requirements file but in virtual environment, 
+# temporary file with the output of 'pip freeze' is created
+[ ! -n "$requirements_file" ] && freeze_tmp_file=$(mktemp) &&
+"$VIRTUAL_ENV/bin/pip" freeze > "$freeze_tmp_file"
+
+# 'no_duplicates' array is piped to a temporary file with delimiter
+# switched from ' ' to '\n'.
+deps_tmp_file=$(mktemp)
+printf "%s\n" "${no_duplicates[@]}" > "$deps_tmp_file"
+
+# file to hold min requirements is created with datetime in name
+reqs_f_name="reqs_$(date +%Y-%m-%d_%H:%M:%S).txt"
+
+# grep options:
+# -v) invert match
+# -w) word regexp 
+# -i) ignore case
+# -f) file from which to obtain patterns
+#
+# grep out patterns found in 'deps_tmp_file' with above mentioned options
+# from requirements ('pip freeze' list or 'requirements_file') and pipe
+# the result to 'reqs_f_name' file
+if [ -n "$requirements_file" ] && [ -n "$dest_dir" ]; then
+reqs_f_path="$dest_dir/$reqs_f_name"
+grep -vwif "$deps_tmp_file" "$requirements_file" > "$reqs_f_path"
+
+elif [ -n "$dest_dir" ] && [ -z "$requirements_file" ]; then
+reqs_f_path="$dest_dir/$reqs_f_name"
+grep -vwif "$deps_tmp_file" "$freeze_tmp_file" > "$reqs_f_path"
+
+elif [ -z "$dest_dir" ] && [ -n "$VIRTUAL_ENV" ]; then
+reqs_f_path="$VIRTUAL_ENV/$reqs_f_name"
+grep -vwif "$deps_tmp_file" "$freeze_tmp_file" > "$reqs_f_path"
+
+elif [ -n "$requirements_file" ] && [ -z "$dest_dir" ]; then
+reqs_f_path="$(pwd)/$reqs_f_name"
+grep -vwif "$deps_tmp_file" "$requirements_file" > "$reqs_f_path"
+
+fi
+
+# if -n/--novernum param is supplied, dependecy versions are removed
+# inplace using sed
+[[ -n "$without_version_nums" ]] &&
+sed -i 's/==.*//g' "$reqs_f_path"
+
+end=$(date +%s)
+[[ -n "$verbose" ]] && echo "elapsed $((end-start)) seconds"
+echo "requirements file created $reqs_f_path"
