@@ -1,35 +1,58 @@
 #!/usr/bin/env bash
 
+README_LINK="https://github.com/scgbckbone/min-reqs/"
+
+help_me () {
+    echo "Usage: min-reqs [options] [arguments]"
+    echo
+    echo "Command line utility for creating minimal python requirement files."
+    echo
+    echo " -v, --verbose      increase verbosity"
+    echo " -n, --novernum     do not include version numbers in resulting file"
+    echo " -d, --dest_dir     directory where created requirements file is put"
+    echo " -f, --req_file     requirements file to be parsed"
+    echo " -p, --pip_path     path to pip exe that should be used"
+    echo " -h, --help         show this help and exit"
+    echo
+    echo "README: $README_LINK"
+
+}
+
 
 while [[ $# -gt 0 ]]; do
     key="$1"
     case "$key" in
-			-d|--dest_dir)
-			shift
-			dest_dir=$1
-			shift
-			;;
-            -f|--file)
-            shift
-            requirements_file=$1
-            shift
-            ;;
-            -n|--novernum)
-            without_version_nums="t"
-            shift
-            ;;
-			-p|--pip_path)
-			shift
-			pip_exe=$1
-			shift
-			;;
-            -v|--verbose)
-			verbose="t"
-			shift
-			;;
-			*)
-            shift
-            ;;
+        -d|--dest_dir)
+        shift
+        dest_dir=$1
+        shift
+        ;;
+        -f|--req_file)
+        shift
+        requirements_file=$1
+        shift
+        ;;
+        -n|--novernum)
+        without_version_nums="t"
+        shift
+        ;;
+        -p|--pip_path)
+        shift
+        pip_exe=$1
+        shift
+        ;;
+        -v|--verbose)
+        verbose="t"
+        shift
+        ;;
+        -h|--help)
+        help_me
+        exit 0
+        ;;
+        *)
+        help_me
+        exit 1
+        ;;
     esac
 done
 
@@ -135,7 +158,7 @@ reqs_f_name="reqs_$(date +%Y-%m-%d_%H:%M:%S).txt"
 #
 # grep out patterns found in 'deps_tmp_file' with above mentioned options
 # from requirements ('pip freeze' list or 'requirements_file') and pipe
-# the result to 'reqs_f_name' file
+# the result to 'reqs_f_path' file
 if [ -n "$requirements_file" ] && [ -n "$dest_dir" ]; then
 reqs_f_path="$dest_dir/$reqs_f_name"
 grep -vwif "$deps_tmp_file" "$requirements_file" > "$reqs_f_path"
