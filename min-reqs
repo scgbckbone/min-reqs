@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-README_LINK="https://github.com/scgbckbone/min-reqs/"
+README_LINK="https://github.com/scgbckbone/min-reqs/blob/master/README.md"
 
 help_me () {
     echo "Usage: min-reqs [options] [arguments]"
@@ -9,8 +9,8 @@ help_me () {
     echo
     echo " -v, --verbose      increase verbosity"
     echo " -n, --novernum     do not include version numbers in resulting file"
-    echo " -d, --dest_dir     directory where created requirements file is put"
-    echo " -f, --req_file     requirements file to be parsed"
+    echo " -d, --dest_dir     directory where resulting requirements file is put"
+    echo " -f, --req_file     requirements file to be used as source"
     echo " -p, --pip_path     path to pip exe that should be used"
     echo " -h, --help         show this help and exit"
     echo

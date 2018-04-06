@@ -5,6 +5,31 @@
 Main purpose of this script is to create requirements file with the most 
 minimal, yet sufficient requirements set.
 
+#### how it does - what it does
+
+min-reqs utilizes and therefore depends on one particular pip command functionality:
+```bash
+pip show [package_name]
+```
+Above command 'Show information about installed packages' as pip man page states.
+Output of command is as follows (in this example for 'pytest' package):
+```
+Name: pytest
+Version: 3.2.3
+Summary: pytest: simple powerful testing with Python
+Home-page: http://pytest.org
+Author: Holger Krekel, Bruno Oliveira, Ronny Pfannschmidt, Floris Bruynooghe, Brianna Laugher, Florian Bruhin and others
+Author-email: UNKNOWN
+License: MIT license
+Location: /home/me/virtual_envs/lazypwd/lib/python2.7/site-packages
+Requires: setuptools, py
+```
+Most important part of the outpu - for min-reqs - is 'Requires' row.
+**min-reqs operates by collecting 'Requires' dependencies, parsing them, 
+and greping them out from 'pip freeze' command output** which **should** result 
+in correct minimal and sufficient dependencies set. 
+
+
 * installation
 ```bash
 git clone https://github.com/scgbckbone/min-reqs
@@ -53,6 +78,9 @@ min-reqs -f ~/Desktop/requirements.txt -p /home/me/.local/bin/pip
 # verbose and without version numbers with default pip3 and want 
 # result file to be created in ~/req_files
 min-reqs -v -n -f ~/Desktop/requirements.txt -p ~/.local/bin/pip3 -d ~/req_files
+```
 
-
+* show help
+```bash
+min-reqs -h
 ```
