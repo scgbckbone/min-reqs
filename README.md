@@ -24,7 +24,7 @@ License: MIT license
 Location: /home/me/virtual_envs/lazypwd/lib/python2.7/site-packages
 Requires: setuptools, py
 ```
-Most important part of the outpu - for min-reqs - is 'Requires' row.
+Most important part of the output - for min-reqs - is 'Requires' row.
 **min-reqs operates by collecting 'Requires' dependencies, parsing them, 
 and greping them out from 'pip freeze' command output** which **should** result 
 in correct minimal and sufficient dependencies set. 
